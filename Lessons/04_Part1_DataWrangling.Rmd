@@ -112,14 +112,21 @@ NTL.phys.data.JunethruOctober4 <- filter(NTL.phys.data, daynum %in% c(152:304))
 # what code do you need to use, based on the class of the variable?
 class(NTL.phys.data$year4)
 
+NTL.phys.data.1999 <- NTL.phys.data %>% filter(year4 == 1999)
+
 # Exercise: 
 # filter NTL.phys.data for Tuesday Lake from 1990 through 1999.
 
+NTL.phys.data.T_lake.1990.1999 <- NTL.phys.data %>% filter(year4 <= 1999 & year4 >= 1990 & lakename == "Tuesday Lake")
+
+NTL.phys.data.T_lake.1990.1999.July <- NTL.phys.data.T_lake.1990.1999 %>% mutate(month = month(sampledate)) %>% filter(month == 7)
+
+class(NTL.phys.data.T_lake.1990.1999.July$month)
 
 ```
 Question: Why don't we filter using row numbers?
 
-> Answer: 
+> Answer: Row numbers arbitrary, could be extracting non-useful information.
 
 ### Arrange
 

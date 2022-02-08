@@ -1,6 +1,6 @@
 ---
 title: "Assignment 4: Data Wrangling"
-author: "Student Name"
+author: "Curtis Cha"
 output: pdf_document
 geometry: margin=2.54cm
 ---
@@ -24,9 +24,34 @@ The completed exercise is due on Monday, Feb 7 @ 7:00pm.
 2. Explore the dimensions, column names, and structure of the datasets. 
 
 ```{r, message = FALSE}
-#1
+#1.
 
-#2
+library(tidyverse)
+library(lubridate)
+
+setwd("C:/Users/curtx/Desktop/Environnmental Data Analytic/Environmental_Data_Analytics_2022/Data/Raw/")
+
+O3_18 <- read.csv("EPAair_O3_NC2018_raw.csv", header = T) 
+
+O3_19 <- read.csv("EPAair_O3_NC2019_raw.csv", header = T) 
+
+PM25_18 <- read.csv("EPAair_PM25_NC2018_raw.csv", header = T)
+
+PM25_19 <- read.csv("EPAair_PM25_NC2019_raw.csv", header = T)
+
+#2.
+
+dim(O3_18)
+summary(O3_18)
+
+dim(O3_19)
+summary(O3_19)
+
+dim(PM25_18)
+summary(PM25_18)
+
+dim(PM25_19)
+summary(PM25_19)
 ```
 
 ## Wrangle individual datasets to create processed files.
@@ -36,19 +61,43 @@ The completed exercise is due on Monday, Feb 7 @ 7:00pm.
 6. Save all four processed datasets in the Processed folder. Use the same file names as the raw files but replace "raw" with "processed".
 
 ```{r}
-#3
+#3.
 
-#4
+O3_18$Date <- as.Date(O3_18$Date, format = "%m/%d/%y")
+O3_19$Date <- as.Date(O3_19$Date, format = "%m/%d/%y")
+PM25_18$Date <- as.Date(PM25_18$Date, format = "%m/%d/%y")
+PM25_19$Date <- as.Date(PM25_19$Date, format = "%m/%d/%y")
 
-#5
+#4.
 
-#6
+O3_18_sub <- O3_18 %>% select("Date", "DAILY_AQI_VALUE", "Site.Name", "AQS_PARAMETER_DESC", "COUNTY", "SITE_LATITUDE", "SITE_LONGITUDE")
+O3_19_sub <- O3_19 %>% select("Date", "DAILY_AQI_VALUE", "Site.Name", "AQS_PARAMETER_DESC", "COUNTY", "SITE_LATITUDE", "SITE_LONGITUDE")
+
+PM25_18_sub <- PM25_18 %>% select("Date", "DAILY_AQI_VALUE", "Site.Name", "AQS_PARAMETER_DESC", "COUNTY", "SITE_LATITUDE", "SITE_LONGITUDE")
+PM25_19_sub <- PM25_19 %>% select("Date", "DAILY_AQI_VALUE", "Site.Name", "AQS_PARAMETER_DESC", "COUNTY", "SITE_LATITUDE", "SITE_LONGITUDE")
+
+#5.
+
+PM25_18_sub$AQS_PARAMETER_DESC <- "PM2.5"
+PM25_19_sub$AQS_PARAMETER_DESC <- "PM2.5"
+
+#6.
+setwd("C:/Users/curtx/Desktop/Environnmental Data Analytic/Environmental_Data_Analytics_2022/Data/Processed")
+
+write.csv(O3_18_sub, row.names = FALSE, file = "EPAair_O3_NC2018_processed.csv")
+
+write.csv(O3_19_sub, row.names = FALSE, file = "EPAair_O3_NC2019_processed.csv")
+
+write.csv(PM25_18_sub, row.names = FALSE, file = "EPAair_PM25_NC2019_processed.csv")
+
+write.csv(PM25_19_sub, row.names = FALSE, file = "EPAair_PM25_NC2019_processed.csv")
 
 ```
 
 
 ## Combine datasets
 7. Combine the four datasets with `rbind`. Make sure your column names are identical prior to running this code. 
+
 8. Wrangle your new dataset with a pipe function (%>%) so that it fills the following conditions: 
 
 * Filter records to include just the sites that the four data frames have in common: "Linville Falls", "Durham Armory", "Leggett", "Hattie Avenue", "Clemmons Middle", "Mendenhall School", "Frying Pan Mountain", "West Johnston Co.", "Garinger High School", "Castle Hayne", "Pitt Agri. Center", "Bryson City", "Millbrook School". (The `intersect` function can figure out common factor levels if we didn't give you this list...)
@@ -63,13 +112,36 @@ The completed exercise is due on Monday, Feb 7 @ 7:00pm.
 ```{r}
 #7
 
+colnames(O3_18_sub) == colnames(O3_19_sub)
+colnames(PM25_18_sub) == colnames(PM25_19_sub)
+colnames(O3_18_sub) == colnames(PM25_19_sub)
+
+O3_PM25_18_19 <- rbind(O3_18_sub, O3_19_sub, PM25_18_sub, PM25_19_sub)
+nrow(O3_PM25_18_19) #37893 rows
+
 #8
+
+sites <- c("Linville Falls", "Durham Armory", "Leggett", "Hattie Avenue", "Clemmons Middle", "Mendenhall School", "Frying Pan Mountain", "West Johnston Co.", "Garinger High School", "Castle Hayne", "Pitt Agri. Center", "Bryson City", "Millbrook School")
+
+O3_PM25_18_19_sum <- O3_PM25_18_19 %>% 
+  filter(O3_PM25_18_19$Site.Name %in% sites) %>% #16510 rows
+  group_by(Date, Site.Name, AQS_PARAMETER_DESC, COUNTY) %>% 
+  dplyr::summarise(mean_aqi = mean(DAILY_AQI_VALUE), 
+            mean_lat = mean(SITE_LATITUDE),
+            mean_long = mean(SITE_LONGITUDE)) %>% #7899 rows for some reason
+  mutate(month = month(Date), year = year(Date))
+dim(O3_PM25_18_19_sum)
 
 #9
 
+O3_PM25_18_19_spread <- pivot_wider(O3_PM25_18_19_sum, names_from = AQS_PARAMETER_DESC, values_from = mean_aqi)
+
 #10
 
+dim(O3_PM25_18_19_spread)
+
 #11
+write.csv(O3_PM25_18_19_spread, row.names = FALSE, file = "EPAair_O3_PM25_NC2122_Processed.csv")
 
 ```
 
@@ -85,11 +157,16 @@ The completed exercise is due on Monday, Feb 7 @ 7:00pm.
 ```{r}
 #12(a,b)
 
+O3_PM25_18_19_spread_sum <- O3_PM25_18_19_spread %>% 
+  group_by(Site.Name, month, year) %>%
+  filter(!is.na(Ozone) & !is.na(PM2.5)) %>%
+  dplyr::summarise("Mean Ozone" = mean(Ozone), "Mean PM2.5" = mean(PM2.5))
 
 #13
 
+dim(O3_PM25_18_19_spread_sum)
 ```
 
 14. Why did we use the function `drop_na` rather than `na.omit`?
 
-> Answer: 
+> Answer: drop_na() is a function of the tidyr package, while na.omit is a built-in R function. Drop_na can remove rows with na's in one column of a dataframe, but na.omit will remove rows with na's in at least one column. Since we are only concerned with specific rows, na.omit would remove rows with important data.
