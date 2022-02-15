@@ -40,12 +40,11 @@ library(RColorBrewer)
 library(colormap)
 
 PeterPaul.chem.nutrients <- 
-  read.csv("./Data/Processed/NTL-LTER_Lake_Chemistry_Nutrients_PeterPaul_Processed.csv", stringsAsFactors = TRUE)
-EPAair <- read.csv("./Data/Processed/EPAair_O3_PM25_NC1819_Processed.csv", stringsAsFactors = TRUE)
+  read.csv("./Processed/NTL-LTER_Lake_Chemistry_Nutrients_PeterPaul_Processed.csv", stringsAsFactors = TRUE)
+EPAair <- read.csv("./Processed/EPAair_O3_PM25_NC1819_Processed.csv", stringsAsFactors = TRUE)
 
 EPAair$Date <- as.Date(EPAair$Date, format = "%Y-%m-%d")
 PeterPaul.chem.nutrients$sampledate <- as.Date(PeterPaul.chem.nutrients$sampledate, format = "%Y-%m-%d")
-
 ```
 
 
@@ -56,19 +55,31 @@ Exercise: build your own scatterplots of PeterPaul.chem.nutrients
 ```{r, fig.height = 3, fig.width = 4, warning = FALSE}
 
 # 1. 
-# Plot surface temperatures by day of  year. 
-# Color your points by year, and facet by lake in two rows.
-# Change the ylab name
 
+# Plot surface temperatures by day of year. 
+ggplot(data = filter(PeterPaul.chem.nutrients, depth == 0), aes(x = daynum, y = temperature_C)) + geom_point()
+
+# Color your points by year, and facet by lake in two rows.
+ggplot(data = filter(PeterPaul.chem.nutrients, depth == 0), aes(x = daynum, y = temperature_C, colour = year4) ) + geom_point() + facet_wrap(vars(lakename))
+
+# Change the ylab name
+ggplot(data = filter(PeterPaul.chem.nutrients, depth == 0), aes(x = daynum, y = temperature_C, colour = year4) ) + geom_point() + facet_wrap(vars(lakename)) + ylab("Temperature(C)")
 
 #2. 
 # Plot temperature by date. Color your points by depth.
+ggplot(data = PeterPaul.chem.nutrients, aes(x = sampledate, y = temperature_C, colour = depth) ) + geom_point()
+
 # Change the size of your point to 0.5
+ggplot(data = PeterPaul.chem.nutrients, aes(x = sampledate, y = temperature_C, colour = depth) ) + geom_point(size = 0.5)
+
 # Change the color palette to magma and play with direction (+- 1), which one makes more sense?
+ggplot(data = PeterPaul.chem.nutrients, aes(x = sampledate, y = temperature_C, colour = depth) ) + geom_point(size = 0.5) +
+  scale_color_viridis(option = "magma", direction = -1)
+
 # Change x axis to include marker/labels every 5 years
-
-
-
+ggplot(data = PeterPaul.chem.nutrients, aes(x = sampledate, y = temperature_C, colour = depth) ) + geom_point(size = 0.5) +
+  scale_color_viridis(option = "magma", direction = -1) +
+  scale_x_date(date_breaks = "5 years", date_labels = "%Y")
 
 ```
 ## Plotting the relationship between two continuous variables: Scatterplot

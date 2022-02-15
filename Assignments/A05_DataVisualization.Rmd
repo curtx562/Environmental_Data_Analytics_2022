@@ -1,6 +1,6 @@
 ---
 title: "Assignment 5: Data Visualization"
-author: "Student Name"
+author: "Curtis Cha"
 output: pdf_document
 geometry: margin=2.54cm
 editor_options: 
@@ -20,8 +20,6 @@ This exercise accompanies the lessons in Environmental Data Analytics on Data Vi
 
 The completed exercise is due on Monday, February 14 at 7:00 pm.
 
-
-
 ## Set up your session 
 1. Set up your session. Verify your working directory and load the tidyverse 
 and cowplot packages. Upload the NTL-LTER processed data files for nutrients 
@@ -33,9 +31,21 @@ the processed data file for the Niwot Ridge litter dataset (use the [`NEON_NIWO_
 
 ```{r}
 #1 
+library(tidyverse)
+library(lubridate)
+setwd("../Data")
+PeterPaul <- read.csv(
+  "Processed/NTL-LTER_Lake_Chemistry_Nutrients_PeterPaul_Processed.csv",
+  header = T, stringsAsFactors = T)
+NIWO <- read.csv(
+  "Processed/NEON_NIWO_Litter_mass_trap_Processed.csv",
+  header = T, stringsAsFactors = T)
 
 #2 
-
+NIWO$collectDate <- ymd(NIWO$collectDate)
+PeterPaul$sampledate <- ymd(PeterPaul$sampledate)
+class(NIWO$collectDate)
+class(PeterPaul$sampledate)
 ```
 ## Define your theme
 3. Build a theme and set it as your default theme.
@@ -43,6 +53,10 @@ the processed data file for the Niwot Ridge litter dataset (use the [`NEON_NIWO_
 ```{r}
 #3
 
+mytheme <- theme_classic(base_size = 13) +
+  theme(axis.text = element_text(color = "blue"), 
+        legend.position = "bottom")
+theme_set(mytheme)
 ```
 
 ## Create graphs
@@ -53,19 +67,50 @@ For numbers 4-7, create ggplot graphs and adjust aesthetics to follow best pract
 ```{r}
 #4
 
+ggplot(data = PeterPaul, aes(x = po4, y = tp_ug)) + 
+  geom_point(size = 1, aes(color = lakename, shape = lakename)) +
+  geom_smooth(method = 'lm', color = 'black') +
+  xlim(c(0,50)) + 
+  labs(y = "Total Phosphorous", x = "Phosphate",  
+       title = "Total Phosphorous v. Phosphate")
 ```
-
 
 5. [NTL-LTER] Make three separate boxplots of (a) temperature, (b) TP, and (c) TN, with month as the x axis and lake as a color aesthetic. Then, create a cowplot that combines the three graphs. Make sure that only one legend is present and that graph axes are aligned.
 
 ```{r}
 #5
+T_C <- ggplot(data = PeterPaul, 
+              aes(y = temperature_C, x = month(sampledate), color = lakename)) + 
+  geom_point() + 
+  labs(y = "Temperature(C)", x = "Month", color = "Lake")
+
+P_ug <- ggplot(data = PeterPaul, 
+               aes(y = tp_ug, x = month(sampledate), color = lakename)) + 
+  geom_point() + 
+  labs(y = "Total Phosphorous(ug)", x = "Month", color = "Lake")
+
+N_ug <- ggplot(data = PeterPaul, 
+               aes(y = tn_ug, x = month(sampledate), color = lakename)) +
+  geom_point() + 
+  labs(y = "Total Nitrogen(ug)", x = "Month", color = "Lake") 
+
+library(cowplot)
+grid <- plot_grid(T_C + theme(legend.position = 'none'), 
+                  P_ug + theme(legend.position = 'none'), 
+                  N_ug + theme(legend.position = 'none'), 
+                  nrow = 1, align = 'h', rel_heights = c(1.25, 1))
+
+title <- ggdraw() + 
+  draw_label("Variables by Month",
+    fontface = 'bold', x = 0, hjust = 0)
+
+plot_grid(title, grid, get_legend(T_C), nrow =3, rel_heights = c(.1, 1, .1))
 
 ```
 
 Question: What do you observe about the variables of interest over seasons and between lakes? 
 
-> Answer: 
+> Answer: From the combined plots of Temperature, Phosphorous and Nitrogen, I observe a peak in all three variables during the months between month 6 and 8. Since these months tend to be the summer months, the rise in temperature is associated with the season. Of the two lakes, Peter Lake has higher concentrations of Nitrogen and Phosphorous. However, there is no difference observed in temperature betweeen the two lakes throughout the months.
 
 6. [Niwot Ridge] Plot a subset of the litter dataset by displaying only the "Needles" functional group. Plot the dry mass of needle litter by date and separate by NLCD class with a color aesthetic. (no need to adjust the name of each land use)
 
@@ -74,10 +119,23 @@ Question: What do you observe about the variables of interest over seasons and b
 ```{r}
 #6
 
+ggplot(data = filter(NIWO, functionalGroup == "Needles"),
+       aes(y = dryMass, x = collectDate)) +
+  geom_point(aes(color = nlcdClass)) + 
+  labs(x = "Collection Date", y = "Dry Mass", color = "Land Class", 
+       title = "Needles: Dry Mass by Collection Date")
+
 #7
+
+ggplot(data = filter(NIWO, functionalGroup == "Needles"),
+       aes(y = dryMass, x = collectDate)) +
+  geom_point() + 
+  facet_wrap(vars(nlcdClass)) + 
+  labs(x = "Collection Date", y = "Dry Mass", color = "Land Class", 
+       title = "Needles: Dry Mass by Collection Date")
 
 
 ```
 Question: Which of these plots (6 vs. 7) do you think is more effective, and why? 
 
-> Answer:
+> Answer: The plot for number 7 is useful because we can better compare the drymass between Land Classes than the plot in number 6. The plot in number 6, the dry mass points are overlaying each other and difficult to discern the differences between the three. This is due to similar collection dates for the three land classes. The plot in number 7 separates the land class' dry mass so they  can be more easily compared. 
