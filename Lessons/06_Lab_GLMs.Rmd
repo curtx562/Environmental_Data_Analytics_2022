@@ -66,12 +66,10 @@ Are Ozone levels below the threshold for "good" AQI index (0-50)?
 
 > Exercise 1: State the hypotheses for testing mean of AQI index.
 
-> Answer: 
+> Answer: The mean AQI for Ozone is below 50.
 
 
 ```{r}
-
-
 summary(EPAair$Ozone)
 EPAair.subsample <- sample_n(EPAair, 5000)
 

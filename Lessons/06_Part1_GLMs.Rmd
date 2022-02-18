@@ -83,7 +83,7 @@ cor.test(PeterPaul.chem.nutrients$irradianceWater, PeterPaul.chem.nutrients$dept
 ```
 Question: How would you report the results of this test (overall findings and report of statistical output)?
 
->  
+>  It is unlikely that there is not correlation between depth and irradiance, since the probability of the null hypothesis is true is below our alpha. 
 
 So, we see there is a significant negative correlation between irradiance and depth (lower light levels at greater depths), and that this model explains about 31 % of the total variance in irradiance. Let's visualize this relationship and the model itself. 
 
@@ -98,9 +98,9 @@ An exploratory option to visualize the model fit is to use the function `plot`. 
 4. **Residuals vs. Leverage.** This graph will display potential outliers. The values that fall outside the dashed red lines (Cook's distance) are outliers for the model. Watch for drastic departures of the solid red line from horizontal - this is a sign of a poor model fit.
 
 ```{r, fig.height = 3, fig.width = 4}
-par(mfrow = c(2,2), mar=c(4,4,4,4))
+#par(mfrow = c(2,2), mar=c(4,4,4,4))
 plot(irradiance.regression)
-par(mfrow = c(1,1))
+par(mfrow = c(2,2))
 ```
 
 The option best suited for communicating findings is to plot the explanatory and response variables as a scatterplot. 
@@ -124,6 +124,7 @@ summary(irradiance.regression2)
 
 par(mfrow = c(2,2), mar=c(4,4,4,4))
 plot(irradiance.regression2)
+
 par(mfrow = c(1,1))
 
 # Add a line and standard error for the linear regression
@@ -132,7 +133,7 @@ irradiancebydepth2 <-
   geom_smooth(method = "lm") +
   scale_y_log10() +
   geom_point() 
-print(irradiancebydepth2) 
+#print(irradiancebydepth2) 
 
 # SE - confidence interval around smooth can also be removed
 irradiancebydepth2 <- 
@@ -140,9 +141,9 @@ irradiancebydepth2 <-
     geom_point() +
     scale_y_log10() +  #log transformed values for irradianceWater
     geom_smooth(method = 'lm', se = FALSE, color = "black")
-print(irradiancebydepth2)
+#print(irradiancebydepth2)
 
-# Make the graph attractive
+#Make the graph attractive
 
 ```
 
