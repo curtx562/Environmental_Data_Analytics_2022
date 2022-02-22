@@ -36,6 +36,7 @@ A one-way ANOVA is used when you have one categorical explanatory variable with 
 
 Does total litter biomass differ among sites at the Niwot Ridge LTER?
 ```{r}
+
 # Wrangle the data
 Litter.Totals <- Litter %>%
   group_by(plotID, collectDate, nlcdClass) %>%

@@ -1,6 +1,6 @@
 ---
 title: "Assignment 6: GLMs (Linear Regressios, ANOVA, & t-tests)"
-author: "Student Name"
+author: "Curtis Cha"
 output: pdf_document
 geometry: margin=2.54cm
 editor_options: 
@@ -27,9 +27,17 @@ The completed exercise is due on Monday, February 28 at 7:00 pm.
 
 ```{r setup}
 #1
+library(tidyverse)
+library(lubridate)
+library(ggplot2)
+setwd("./Data/Raw")
+ntl <- read.csv('NTL-LTER_Lake_ChemistryPhysics_Raw.csv', header = TRUE)
 
+ntl$sampledate <- mdy(ntl$sampledate)
 
 #2
+mytheme <- theme_classic(base_size = 12) + 
+  theme(axis.text = element_text(color = "black"), legend.position = "right")
 
 
 ```
@@ -39,8 +47,10 @@ Our first research question is: Does mean lake temperature recorded during July 
 
 3. State the null and alternative hypotheses for this question:
 > Answer:
-H0: 
-Ha: 
+H0: Lake depth level has no significant effect in determining mean of recorded lake 
+temperatures for the month of July.
+Ha: Lake depth level has a significant effect in determining mean of recorded lake 
+temperatures for the month of July.
 
 
 4.  Wrangle your NTL-LTER dataset with a pipe function so that the records meet the following criteria: 
@@ -52,9 +62,16 @@ Ha:
 
 ```{r scatterplot}
 #4
-
+ntl_july <- ntl %>% 
+  mutate(month = month(ntl$sampledate)) %>%
+  filter(month == 7, !is.na(ntl$temperature_C)) %>%
+  select("lakename", "year4", "daynum", "depth", "temperature_C")
 
 #5
+ggplot(data = ntl_july, aes(x = depth, y = temperature_C)) +
+  geom_point() + geom_smooth(method = "lm") + ylim(c(0,35)) + 
+  xlab("Depth(m)") + ylab("Temperature(C)") + 
+  ggtitle("Mean Recorded Temperature of Lakes (July)\n vs. Depth Level")
 
 
 ```
@@ -63,13 +80,19 @@ Ha:
 6. Interpret the figure. What does it suggest with regards to the response of temperature to depth? Do the distribution of points suggest about anything about the linearity of this trend?
 
 > Answer: 
-
+The scatter plot suggests that depth has a negative relationship with mean 
+recorded temperature. The distribution of points suggest there may not be a 
+linear relationship between the two variables sa there is high variance in 
+mean temperatures at lower depts (0-5m). However at lower depths (10-15m), there
+is consistent low mean temperatures.
 
 7. Perform a linear regression to test the relationship and display the results
 
 ```{r linear.regression}
 #7
 
+glm0 <- glm(data = ntl_july, temperature_C ~ depth)
+summary(glm0)
 
 ```
 
@@ -77,7 +100,11 @@ Ha:
 8. Interpret your model results in words. Include how much of the variability in temperature is explained by changes in depth, the degrees of freedom on which this finding is based, and the statistical significance of the result. Also mention how much temperature is predicted to change for every 1m change in depth. 
 
 > Answer:
-
+According to the model, for every one unit increase in depth, there is a 1.95621 
+decrease in recorded mean temperature. Given the null hypothesis is true, the 
+probability of observing this relationship between temperature and depth is 
+significantly low (less than 0.05). The linear model produce explains around 
+73.87% of the variability in mean recorded temperature.
 
 ---
 
@@ -92,9 +119,14 @@ Let's tackle a similar question from a different approach. Here, we want to expl
 ```{r temperature.model}
 #9
 
+glm1 <- glm(data = ntl_july, temperature_C ~ year4 + daynum + depth)
 
+step(glm1, direction = 'backward')
 
 #10
+
+glm_final <- step(step(glm1, direction = 'backward'))
+summary(glm_final)
 
 
 ```
@@ -102,6 +134,13 @@ Let's tackle a similar question from a different approach. Here, we want to expl
 11. What is the final set of explanatory variables that the AIC method suggests we use to predict temperature in our multiple regression? How much of the observed variance does this model explain? Is this an improvement over the model using only depth as the explanatory variable?
 
 > Answer: 
+The final output of the step() suggests that all three variables of "Year", 
+"Day", and "Depth" are signficiant in determining the mean recorded temperature 
+of lakes. The final model explains 74.11897% of the variability in mean recorded 
+temperature which is slightly higher than that of the single-variable model. The 
+single variable model does have a significantly higher AIC (53762) than that of
+the fuller model (53674), meaning the fuller model is an improvement upon the 
+single-variable.
 
 
 
@@ -112,7 +151,10 @@ Let's tackle a similar question from a different approach. Here, we want to expl
 
 ```{r anova.model}
 #12
-
+lake_anova <- aov(data = ntl_july, temperature_C ~ lakename)
+summary(lake_anova)
+lake_lm <- lm(data = ntl_july, temperature_C ~ lakename)
+summary(lake_lm)
 
 ```
 
@@ -120,13 +162,17 @@ Let's tackle a similar question from a different approach. Here, we want to expl
 
 > Answer: 
 
-
-
 14. Create a graph that depicts temperature by depth, with a separate color for each lake. Add a geom_smooth (method = "lm", se = FALSE) for each lake. Make your points 50 % transparent. Adjust your y axis limits to go from 0 to 35 degrees. Clean up your graph to make it pretty. 
 
 ```{r scatterplot.2}
 #14.
 
+ggplot(data = ntl_july, aes(y = temperature_C, x = depth,
+                            color = lakename)) + 
+  geom_point(alpha = 0.5, size = .5) +
+  geom_smooth(method = "lm", se = F, size = 0.75) +
+  ylim(c(0,35)) + 
+  labs(x = "Depth(m)", y = "Temperature(C)", title = "Mean July Lake Temp.\n vs. Depth Level", color = "Lake")
 
 ```
 
@@ -134,18 +180,20 @@ Let's tackle a similar question from a different approach. Here, we want to expl
 
 ```{r tukey.test}
 #15
-
-
+TukeyHSD(lake_anova)
 ```
 
 16.From the findings above, which lakes have the same mean temperature, statistically speaking, as Peter Lake? Does any lake have a mean temperature that is statistically distinct from all the other lakes?
 
->Answer:
+>Answer: 
 
  
 
 17. If we were just looking at Peter Lake and Paul Lake. What's another test we might explore to see whether they have distinct mean temperatures? 
 
->Answer: 
+>Answer: A two sample t test to test whether the mean recorded temperatures of 
+Peter and Paul Lake are significantly different. The hypotheseses would be: 
+H0: mean_temp_Paul - mean_temp_Peter == 0 / 
+Ha: mean_temp_Paul - mean_temp_Peter != 0.
 
 
