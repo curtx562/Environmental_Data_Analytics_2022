@@ -30,8 +30,10 @@ The completed exercise is due on Monday, February 28 at 7:00 pm.
 library(tidyverse)
 library(lubridate)
 library(ggplot2)
-setwd("./Data/Raw")
-ntl <- read.csv('NTL-LTER_Lake_ChemistryPhysics_Raw.csv', header = TRUE)
+
+ntl <- read.csv(
+  '../Data/Raw/NTL-LTER_Lake_ChemistryPhysics_Raw.csv', 
+  header = TRUE)
 
 ntl$sampledate <- mdy(ntl$sampledate)
 
@@ -47,10 +49,10 @@ Our first research question is: Does mean lake temperature recorded during July 
 
 3. State the null and alternative hypotheses for this question:
 > Answer:
-H0: Lake depth level has no significant effect in determining mean of recorded lake 
-temperatures for the month of July.
-Ha: Lake depth level has a significant effect in determining mean of recorded lake 
-temperatures for the month of July.
+H0: Lake depth level has no significant effect in determining mean of recorded 
+lake temperatures for the month of July.
+Ha: Lake depth level has a significant effect in determining mean of recorded 
+lake temperatures for the month of July.
 
 
 4.  Wrangle your NTL-LTER dataset with a pipe function so that the records meet the following criteria: 
@@ -73,7 +75,6 @@ ggplot(data = ntl_july, aes(x = depth, y = temperature_C)) +
   xlab("Depth(m)") + ylab("Temperature(C)") + 
   ggtitle("Mean Recorded Temperature of Lakes (July)\n vs. Depth Level")
 
-
 ```
 
 
@@ -84,15 +85,18 @@ The scatter plot suggests that depth has a negative relationship with mean
 recorded temperature. The distribution of points suggest there may not be a 
 linear relationship between the two variables sa there is high variance in 
 mean temperatures at lower depts (0-5m). However at lower depths (10-15m), there
-is consistent low mean temperatures.
+is consistent low mean temperatures. It's possible that there true relationship
+between depth and temperature is not linear.
 
 7. Perform a linear regression to test the relationship and display the results
 
 ```{r linear.regression}
 #7
 
-glm0 <- glm(data = ntl_july, temperature_C ~ depth)
-summary(glm0)
+lm0 <- lm(data = ntl_july, temperature_C ~ depth)
+sum_0 <- summary(lm0)
+print(sum_0)
+
 
 ```
 
@@ -103,8 +107,10 @@ summary(glm0)
 According to the model, for every one unit increase in depth, there is a 1.95621 
 decrease in recorded mean temperature. Given the null hypothesis is true, the 
 probability of observing this relationship between temperature and depth is 
-significantly low (less than 0.05). The linear model produce explains around 
-73.87% of the variability in mean recorded temperature.
+significantly low (less than 0.05). Due to this low p-value, I reject the null 
+hypothesis that depth has no significant effect on mean recorded lake
+temperature in July. The linear model produce explains around 73.87% of the 
+variability in mean recorded temperature.
 
 ---
 
@@ -119,15 +125,16 @@ Let's tackle a similar question from a different approach. Here, we want to expl
 ```{r temperature.model}
 #9
 
-glm1 <- glm(data = ntl_july, temperature_C ~ year4 + daynum + depth)
+lm1 <- lm(data = ntl_july, temperature_C ~ year4 + daynum + depth)
 
-step(glm1, direction = 'backward')
+lm_final <- step(lm1)
+
+print(lm_final$coefficients) #full model is the best model
+
 
 #10
-
-glm_final <- step(step(glm1, direction = 'backward'))
-summary(glm_final)
-
+lm1 <- lm(data = ntl_july, temperature_C ~ year4 + daynum + depth)
+print(summary(lm1))
 
 ```
 
@@ -152,15 +159,22 @@ single-variable.
 ```{r anova.model}
 #12
 lake_anova <- aov(data = ntl_july, temperature_C ~ lakename)
-summary(lake_anova)
+print(summary(lake_anova))
 lake_lm <- lm(data = ntl_july, temperature_C ~ lakename)
-summary(lake_lm)
+print(summary(lake_lm))
 
 ```
 
 13. Is there a significant difference in mean temperature among the lakes? Report your findings. 
 
-> Answer: 
+> Answer: According to both the ANOVA and linear models, a lake's given name has 
+a significant effect in determining the mean recorded temperature. The ANOVA 
+outputs a signficiant low p-value, meaning the null hypthesis (lake name has no 
+significant effect on mean recorded temperature) is rejected. The linear model 
+compares each lake to the "intercept" or a given lake's mean recorded 
+temperature. It outputs significantly low p-values for each lakename as well, 
+meaning that each lake has a significantly different mean temperature from the 
+lake used as intercept.
 
 14. Create a graph that depicts temperature by depth, with a separate color for each lake. Add a geom_smooth (method = "lm", se = FALSE) for each lake. Make your points 50 % transparent. Adjust your y axis limits to go from 0 to 35 degrees. Clean up your graph to make it pretty. 
 
@@ -172,7 +186,9 @@ ggplot(data = ntl_july, aes(y = temperature_C, x = depth,
   geom_point(alpha = 0.5, size = .5) +
   geom_smooth(method = "lm", se = F, size = 0.75) +
   ylim(c(0,35)) + 
-  labs(x = "Depth(m)", y = "Temperature(C)", title = "Mean July Lake Temp.\n vs. Depth Level", color = "Lake")
+  labs(x = "Depth(m)", y = "Temperature(C)", 
+  title = "Mean July Lake Temp.\n vs.
+       Depth Level", color = "Lake")
 
 ```
 
@@ -185,7 +201,13 @@ TukeyHSD(lake_anova)
 
 16.From the findings above, which lakes have the same mean temperature, statistically speaking, as Peter Lake? Does any lake have a mean temperature that is statistically distinct from all the other lakes?
 
->Answer: 
+>Answer: Crampton Lake & Central Long Lake, Ward Lake & Crampton Lake, 
+Hummingbird Lake & East Long Lake, Tuesday Lake & East Long Lake, 
+Tuesday Lake & Hummingbird Lake, West Long Lake & Hummingbird Lake, 
+Peter Lake & Paul Lake, Ward Lake & Paul Lake, West Long Lake & Tuesday Lake are
+pairs of lake with p-adjacent values above 0.05. Their mean recorded 
+temperatures are not signficantly different.There is no one lake with a mean 
+recorded temperature signficantly different from the others.
 
  
 
