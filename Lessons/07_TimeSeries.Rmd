@@ -125,7 +125,7 @@ The `stl` function decomposes the time series object into its component parts. W
 # Generate the decomposition
 EnoDischarge.late_Decomposed <- stl(EnoDischarge.late_ts, s.window = "periodic")
 
-# Visualize the decomposed series. 
+# Visualize the decomposed series.
 plot(EnoDischarge.late_Decomposed)
 
 # We can extract the components and turn them into data frames

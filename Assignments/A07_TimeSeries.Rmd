@@ -1,6 +1,6 @@
 ---
 title: "Assignment 7: Time Series Analysis"
-author: "Student Name"
+author: "Curtis Cha"
 output: pdf_document
 geometry: margin=2.54cm
 editor_options: 
@@ -29,6 +29,13 @@ The completed exercise is due on Monday, March 14 at 7:00 pm.
 
 ```{r}
 #1
+library(tidyverse)
+library(lubridate)
+library(zoo)
+library(trend)
+
+mytheme <- theme_classic(base_size = 12) + 
+  theme(axis.text = element_text(color = "black"), legend.position = "right")
 
 ```
 
@@ -38,7 +45,11 @@ The completed exercise is due on Monday, March 14 at 7:00 pm.
 ```{r, message = FALSE}
 #2
 
+setwd("../Data/Raw/Ozone_TimeSeries/")
 
+
+GaringerOzone <- list.files(pattern="*.csv") %>% 
+  map_df(~read_csv(.))
 ```
 
 ## Wrangle
@@ -53,13 +64,20 @@ The completed exercise is due on Monday, March 14 at 7:00 pm.
 
 ```{r}
 # 3
+GaringerOzone$Date <- mdy(GaringerOzone$Date)
 
 # 4
+GaringerOzone_cut <- GaringerOzone %>% 
+  select("Date", "Daily Max 8-hour Ozone Concentration", "DAILY_AQI_VALUE")
 
 # 5
+Days <- as.data.frame(seq(as.Date("2010/01/01"), as.Date("2019/12/31"), by = "day"))
+colnames(Days) <- "Date"
 
 # 6
+GaringerOzone <- left_join(Days, GaringerOzone_cut)
 
+colnames(GaringerOzone) <- c("Date", "Daily_O3_PPM", "Daily_03_AQI")
 ```
 
 ## Visualize
@@ -68,10 +86,18 @@ The completed exercise is due on Monday, March 14 at 7:00 pm.
 
 ```{r}
 #7
+library(ggplot2)
 
+ggplot(data = GaringerOzone, aes(x = Date, y = Daily_O3_PPM)) +
+  geom_point() + labs(y = "Daily O3(ppm)", 
+                      title = "O3 Concentrations over Time") +
+  geom_smooth(se = F, color = "red")
 ```
 
->Answer: 
+>Answer: The red trendline suggests that there is either a weak decrease or no
+signficant change in Daily Ozone concentrations over time. While the trendline
+itself could be viewed as decreasing, it's difficult to determine the actual
+trend based on visual observation alone.
 
 ## Time Series Analysis
 
@@ -80,11 +106,21 @@ Study question: Have ozone concentrations changed over the 2010s at this station
 8. Use a linear interpolation to fill in missing daily data for ozone concentration. Why didn't we use a piecewise constant or spline interpolation?
 
 ```{r}
-#8
+#8 
+
+GaringerOzone$Daily_O3_PPM <- zoo::na.approx(GaringerOzone$Daily_O3_PPM)
 
 ```
 
-> Answer:  
+> Answer:  Piece-wise would fill NA's with the nearest member, rather than an 
+in-between value between nearest neighbors. Observing the plot, it's clear that 
+values in sequence are either increasing or decreasing (based on the
+seasonal pattern of O3 PPM over time). The Spline interpolation uses a quadratic 
+equation for interpolation. It's unlikely that an unknown 03 PPM value shares a 
+quadratic relationship with its two neighbors. For a given day, if O3 PPM the 
+day before is lower than the O3 PPM the day after, it's likely that the O3 PPM
+of that day is a value in between. A linear interplotion for filling in Daily
+O3 PPM makes more sense.
 
 
 9. Create a new data frame called `GaringerOzone.monthly` that contains aggregated data: mean ozone concentrations for each month. In your pipe, you will need to first add columns for year and month to form the groupings. In a separate line of code, create a new Date column with each month-year combination being set as the first day of the month (this is for graphing purposes only)
@@ -92,6 +128,11 @@ Study question: Have ozone concentrations changed over the 2010s at this station
 ```{r}
 #9
 
+GaringerOzone.monthly <- GaringerOzone %>%
+  mutate(Year = year(Date), Month = month(Date)) %>%
+  mutate(Date = my(paste(Month,"-",Year))) %>% 
+  group_by(Date) %>%
+  summarise(Monthly_Mean_PPM = mean(Daily_O3_PPM))
 ```
 
 
@@ -100,6 +141,10 @@ Study question: Have ozone concentrations changed over the 2010s at this station
 ```{r}
 #10
 
+GaringerOzone.daily.ts <- ts(data = GaringerOzone$Daily_O3_PPM,
+                             start = c(2010,1), frequency = 365)
+GaringerOzone.monthly.ts <- ts(data = GaringerOzone.monthly$Monthly_Mean_PPM,
+                             start = c(2010,1), frequency = 12)
 
 ```
 
@@ -109,7 +154,12 @@ Study question: Have ozone concentrations changed over the 2010s at this station
 ```{r}
 #11
 
-
+GaringerOzone.daily.decomp <- stl(GaringerOzone.daily.ts, 
+                                  s.window = "periodic")
+plot(GaringerOzone.daily.decomp)
+GaringerOzone.monthly.decomp <- stl(GaringerOzone.monthly.ts, 
+                                    s.window = "periodic")
+plot(GaringerOzone.monthly.decomp)
 ```
 
 
@@ -118,34 +168,69 @@ Study question: Have ozone concentrations changed over the 2010s at this station
 ```{r}
 #12
 
-
+library(Kendall)
+summary(Kendall::SeasonalMannKendall(GaringerOzone.monthly.ts))
 
 ```
 
-> Answer:  
+> Answer:  The Seasonal Mann-Kendall is appropriate because the scatter plot of
+O3 over time depicts a seasonal pattern. The other four tests (linear reg, 
+Mann-Kendall (non-seasonal), Rho, Aug. Dickey-Fuller) are NOT useful for 
+analyzing seasonality.
 
 13. Create a plot depicting mean monthly ozone concentrations over time, with both a geom_point and a geom_line layer. Edit your axis labels accordingly.
 
 ```{r}
 # 13
 
+ggplot(data = GaringerOzone.monthly, aes(x = Date, y = Monthly_Mean_PPM)) +
+  geom_point() + labs(y = "Monthly Mean O3 (ppm)", 
+                      title = "O3 Concentrations over Time") +
+  geom_line(color = "red", size = 0.75) +
+  geom_smooth(method = "lm", se = F)
 
 
 ```
 
 14. To accompany your graph, summarize your results in context of the research question. Include output from the statistical test in parentheses at the end of your sentence. Feel free to use multiple sentences in your interpretation.
 
-> Answer: 
+> Answer: The graph of mean monthly O3 concentrations between 2010 and 2020 
+demonstrate a weak, negative relationship between O3 (ppm) and time. Visually,
+there is seasonality of O3 concentrations. As time approaches winter months, 
+there are lower O3 mean values. In contrast, O3 values rise as time approaches 
+summer months. The seasonal MK test also provides statistical support for a
+negative relationship between O3 and time. Results of seasonal MK test: 
+score = -77, tau = -0.143, 2-sided pvalue = 0.046724. Since the p-value is
+extremely low, we reject the null hypothesis that time series data is stationary.
+The negative score and tau indicate that the relationship itself is negative.
 
-15. Subtract the seasonal component from the `GaringerOzone.monthly.ts`. Hint: Look at how we extracted the series components for the EnoDischarge on the lesson Rmd file.
+15. Subtract the seasonal component from the `GaringerOzone.monthly.ts`. Hint: 
+Look at how we extracted the series components for the EnoDischarge on the 
+lesson Rmd file.
 
 16. Run the Mann Kendall test on the non-seasonal Ozone monthly series. Compare the results with the ones obtained with the Seasonal Mann Kendall on the complete series.
 
 ```{r}
 #15
+GaringerOzone.monthly.Decomposed <- stl(GaringerOzone.monthly.ts,
+                                        s.window = "periodic")
+
+GaringerOzone.monthly.noseason <- GaringerOzone.monthly.ts -
+  GaringerOzone.monthly.Decomposed$time.series[,1]
+
 
 #16
 
+summary(MannKendall(GaringerOzone.monthly.noseason))
+
 ```
 
-> Answer: 
+> Answer: After subtracting seasonality from the O3 monthly mean data and 
+running the non-seasonal Mann Kendall test, I observe similar results as that of
+the seasonal Mann Kendall test. Similar to the seasonal MK test, the 
+non-seasonal test outputs a significantly low p-value and negative tau. We 
+reject the null hypothesis that the non-seasonal O3 data is stationary and 
+observe a negative decreasing trend of O3 over time. However, one difference is 
+that the tau value (and p-value) of the MK test is lower than that of the seasonal MK test. This indicates that the non-seasonal O3 values have a stronger negative 
+relationship with time.
+(Results of MK: tau = -0.165, 2-sided pvalue = 0.0075402)
