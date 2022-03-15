@@ -118,6 +118,13 @@ mapView(counties_sf, zcol = "AWATER")
 ```{r read HUCs shapefile}
 #Read the shapefile into an sf dataframe named "huc8_sf"
 
+getwd()
+
+huc8_sf <- st_read("./Data/Spatial/NCHUC8.shp")
+
+huc8_sf$HUC_8 <- as.factor(huc8_sf$HUC_8)
+
+
 
 #Reveal the columns
 
@@ -129,7 +136,7 @@ mapView(counties_sf, zcol = "AWATER")
 
 
 #View the data as a map, colored by the acreage in each
-
+ggplot(data=huc8_sf) + geom_sf()
 
 ```
 
@@ -139,11 +146,13 @@ mapView(counties_sf, zcol = "AWATER")
 
 ```{r Select the Upper Neuse HUC 8}
 #Read the shapefile into an sf dataframe
-
+UpperNeuse <- st_read("./Data/Spatial/NCHUC8.shp") %>% filter(SUBBASIN == "Upper Neuse")
 
 
 #Create a map
-
+ggplot() + 
+  geom_sf(data=huc8_sf, fill = "orange") + 
+  geom_sf(data=UpperNeuse, fill = "purple")
 
 ```
 
@@ -239,17 +248,18 @@ ggplot() +
 
 ```{r}
 #Compute HUC8 wind energy
-
-
+wind <- read.csv('https://raw.githubusercontent.com/ENV859/EnviroAtlasData/main/Wind_Energy.csv', 
+                 colClasses = c("HUC_12" = "factor")) %>% 
+  group_by(HUC_12) %>%
+  summarise(energy = sum(kWhkm2day)) %>%
+  mutate(huc_8 = substr(HUC_12, 1, 8))
 
 
 #Join to HUC_8 features
-
-
-
+left_join(huc8_sf, wind, by = c("HUC_8" = "huc_8"))
 
 #View the outputs
-
+head(huc8_sf)
 
 
 ```
@@ -364,7 +374,6 @@ mapview(neuse_counties_sf, zcol='Area_m2')
 
 ```{r EXERCISE: Clipping}
 #Select the Triangle County from the 
-
 
 
   
