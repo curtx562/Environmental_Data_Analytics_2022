@@ -19,17 +19,17 @@ editor_options:
 ```{r, message = FALSE}
 library(tidyverse)
 library(agricolae)   
-
-PeterPaul.chem.nutrients <- read.csv("./Data/Processed/NTL-LTER_Lake_Chemistry_Nutrients_PeterPaul_Processed.csv", stringsAsFactors = TRUE)
+setwd("C:/Users/cc743/Desktop/EDA/Environmental_Data_Analytics_2022/Data/Processed")
+PeterPaul.chem.nutrients <- read.csv("NTL-LTER_Lake_Chemistry_Nutrients_PeterPaul_Processed.csv", stringsAsFactors = TRUE)
 # Set date to date format
 PeterPaul.chem.nutrients$sampledate <- as.Date(PeterPaul.chem.nutrients$sampledate, format = "%Y-%m-%d")
 
-EPAair <- read.csv("./Data/Processed/EPAair_O3_PM25_NC1819_Processed.csv", stringsAsFactors = TRUE)
+EPAair <- read.csv("EPAair_O3_PM25_NC1819_Processed.csv", stringsAsFactors = TRUE)
 # Set date to date format
 EPAair$Date <- as.Date(EPAair$Date, format = "%Y-%m-%d")
 
 
-Litter <- read.csv("./Data/Processed/NEON_NIWO_Litter_mass_trap_Processed.csv", stringsAsFactors = TRUE)
+Litter <- read.csv("NEON_NIWO_Litter_mass_trap_Processed.csv", stringsAsFactors = TRUE)
 # Set date to date format
 Litter$collectDate <- as.Date(Litter$collectDate , format = "%Y-%m-%d")
 
@@ -150,6 +150,12 @@ Create three plots, each with appropriately formatted axes and legends. Choose a
 ```{r}
 #Exercise 2:
 
+ggplot(data  = EPAair, aes(x = Ozone, fill = factor(Year))) + geom_density(alpha = 0.5) + scale_fill_manual(values = c('blue', 'yellow'))
+
+ggplot(data = EPAair, aes(y = Ozone, x = factor(Year))) + geom_boxplot() + stat_summary(fun = max, geom = "text", label = c("a","b"), vjust = -1)
+
+ggplot(data = EPAair, aes(y = Ozone, x = factor(Year))) + geom_violin(draw_quantiles = 0.5) + stat_summary(fun = max, geom = "text", label = c("a","b"), vjust = -1)
+
 
 ```
 
@@ -163,11 +169,13 @@ For the NTL-LTER dataset, can we predict PM2.5 from Ozone?
 
 #Exercise 3: Run a linear regression PM2.5 by Ozone. Find the p-value and R-squared value. 
 
-
+O3_P25 <- lm(data = EPAair, Ozone ~ PM2.5)
+sumr<-summary(O3_P25)
+sumr$r.squared
+sumr$coefficients
 
 #Exercise 4: Build a scatterplot. Add a line and standard error for the linear regression. 
-
-
+ggplot(data = EPAair, aes(x = Ozone, y = PM2.5)) + geom_point() + geom_smooth(method ='lm', se = F)
 
 ```
 
@@ -179,16 +187,27 @@ What other variables can we add to improve model?
 ```{r}
 
 #Exercise 5: Build correlation plots and identify more possible explanatory variables to add to the regression.
+EPAair <- read.csv("EPAair_O3_PM25_NC2021_Processed.csv", stringsAsFactors = TRUE)
+# Set date to date format
+EPAair$Date <- as.Date(EPAair$Date, format = "%Y-%m-%d")
 
+lm0 <- lm(data = EPAair, Ozone ~ SITE_LATITUDE:PM2.5 - SITE_LONGITUDE - Year)
+summary(lm0)
 
-
+cor <- cor(EPAair %>% select(SITE_LATITUDE:PM2.5) %>% drop_na())
+library(corrplot)
+corrplot(cor, method = "ellipse")
+corrplot.mixed(cor, upper = "ellipse")
 
 #Exercise 6: Choose a model by AIC in a Stepwise Algorithm. Do the results from AIC match the variables you selected on Exercise 5?
 
-
-
+lm1 <- lm(data = EPAair, PM2.5 ~ Ozone + Year + Month + SITE_LATITUDE + SITE_LONGITUDE)
+lm_fin <- step(lm1)
+summary(lm_fin)
 
 #Exercise 7: Run another regression using the variables selected on Exercise 6. Compare r-squared value with the one from Exercise 5. 
+lm2 <- lm(data = EPAair, PM2.5 ~ Ozone + Month + SITE_LATITUDE + SITE_LONGITUDE)
+summary(lm2)
 
 ```
 
