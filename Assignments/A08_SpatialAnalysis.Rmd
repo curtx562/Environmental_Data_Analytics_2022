@@ -30,10 +30,13 @@ This exercise accompanies the lessons in Environmental Data Analytics (ENV872L) 
 
 ```{r Prepare workspace}
 #1.
-
+getwd()
 
 #2. 
-
+library(tidyverse)
+library(sf)
+library(leaflet)
+library(mapview)
 
 ```
 
@@ -48,17 +51,22 @@ In this exercise, we will be exploring stream gage height data in Nebraska corre
 ```{r Read the county data into an sf dataframe}
 #3. Read in Counties shapefile into an sf dataframe, filtering for just NE counties
 
+UScounty <- st_read("./Data/Spatial/cb_2018_us_county_20m.shp")
 
 #4. Reveal the CRS of the counties features
 
+st_crs(UScounty)
 
 #5. Plot the data
+
+ggplot(data=UScounty) + geom_sf()
+mapview(UScounty)
 
 ```
 
 6. What is the EPSG code of the Counties dataset? Is this a geographic or a projected coordinate reference system? (Or, does this CRS use angular or planar coordinate units?) To what datum is this CRS associated? (Tip: look the EPSG code on <https://spatialreference.org>) 
 
-> ANSWER: 
+> ANSWER: The EPSG Code is 4269 (datum: NAD83) and this is a geographic coordinate reference system (angular).
 > 
 
 
@@ -72,16 +80,16 @@ Next we'll read in some USGS/NWIS gage location data added to the `Data/Raw` fol
 
 ```{r Read in USGS Gage Locations}
 #7. Read in gage locations csv as a dataframe
-
+NWIS <- read_csv("./Data/Raw/NWIS_SiteInfo_NE_RAW.csv")
 
 #8. Reveal the names of the columns
-
+names(NWIS)
 
 ```
 
 9. What columns in the dataset contain the x and y coordinate values, respectively?  
 > ANSWER:
-> 
+> The x and y coordinate values are contained in columns "dec_long_va" and "dec_lat_va".
 
 
 ### Convert the dataframe to a spatial features ("sf") dataframe
@@ -94,16 +102,19 @@ Next we'll read in some USGS/NWIS gage location data added to the `Data/Raw` fol
 ```{r Convert dataframe to sf dataframe}
 #10. Convert to an sf object
 
+NWIS_sf <- NWIS %>% st_as_sf(coords = c('dec_long_va','dec_lat_va'), crs=4269)
+
 
 #11. Re-examine the column names
 
-
+names(NWIS_sf)
 ```
 
 12. What new field(s) appear in the sf dataframe created? What field(s), if any, disappeared?
 
 >ANSWER: 
->
+> The "dec_long_va" and "dec_lat_va" are replaced by a new field "geometry", which contains the long, lat data 
+of objects.
 
 
 ### Plot the gage locations on top of the counties
@@ -116,6 +127,9 @@ Next we'll read in some USGS/NWIS gage location data added to the `Data/Raw` fol
 ```{r Plot the spatial features}
 #13. Plot the gage locations atop the county features
 
+ggplot() + 
+  geom_sf(data = UScounty) + 
+  geom_sf(data = NWIS)
 
 ```
 
@@ -134,20 +148,22 @@ Lastly, we want to attach some gage height data to our site locations. I've cons
 
 ```{r}
 #14. Read the site flow data into a data frame
-
+flow <- read.csv("./Data/Raw/NWIS_SiteFlowData_NE_RAW.csv", header = T, colClasses = c('site_no' = 'character'))
 
 #15. Show the column names
-
+names(flow)
 
 #16. Join location data to it
 
+join <- left_join(NWIS_sf, flow, by = 'site_no') %>% filter(!is.na(gage_ht))
 
 #17. Show the column names of the joined dataset
 
+names(join)
 
 #18. Show the dimensions of this joined dataset
 
-
+dim(join)
 ```
 
 ### Map the pattern of gage height data
@@ -159,7 +175,10 @@ Now we can examine where the flooding appears most acute by visualizing gage hei
 ```{r}
 #Map the points, sized by gage height
 
+m1 <- mapview(join, zcol= "gage_ht")
+m2 <- mapview(UScounty)
 
+m1 + m2
 #ggplot
 
 
