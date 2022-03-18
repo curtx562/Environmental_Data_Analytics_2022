@@ -50,6 +50,8 @@ setwd("../Data/Raw/Ozone_TimeSeries/")
 
 GaringerOzone <- list.files(pattern="*.csv") %>% 
   map_df(~read_csv(.))
+
+dim(GaringerOzone)
 ```
 
 ## Wrangle
@@ -78,6 +80,8 @@ colnames(Days) <- "Date"
 GaringerOzone <- left_join(Days, GaringerOzone_cut)
 
 colnames(GaringerOzone) <- c("Date", "Daily_O3_PPM", "Daily_03_AQI")
+
+dim(GaringerOzone)
 ```
 
 ## Visualize
