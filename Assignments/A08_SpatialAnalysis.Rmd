@@ -1,12 +1,13 @@
 ---
 title: "Assignment 9: Spatial Analysis in R"
-author: "Student Name"
+author: "Curtis Cha"
 output: pdf_document
 geometry: margin=2.54cm
 editor_options: 
   chunk_output_type: console
   markdown: 
     wrap: 72
+always_allow_html: true
 ---
 
 ## OVERVIEW
@@ -51,16 +52,18 @@ In this exercise, we will be exploring stream gage height data in Nebraska corre
 ```{r Read the county data into an sf dataframe}
 #3. Read in Counties shapefile into an sf dataframe, filtering for just NE counties
 
-UScounty <- st_read("./Data/Spatial/cb_2018_us_county_20m.shp")
+UScounty <- st_read(
+  "../Data/Spatial/cb_2018_us_county_20m.shp")
+Neb <- UScounty[UScounty$STATEFP == 31,]
 
 #4. Reveal the CRS of the counties features
 
-st_crs(UScounty)
+st_crs(Neb)
 
 #5. Plot the data
 
-ggplot(data=UScounty) + geom_sf()
-mapview(UScounty)
+ggplot(data=Neb) + geom_sf(fill = "gray") + labs(title = "Nebraska Counties")
+mapview(Neb)
 
 ```
 
@@ -80,7 +83,8 @@ Next we'll read in some USGS/NWIS gage location data added to the `Data/Raw` fol
 
 ```{r Read in USGS Gage Locations}
 #7. Read in gage locations csv as a dataframe
-NWIS <- read_csv("./Data/Raw/NWIS_SiteInfo_NE_RAW.csv")
+NWIS <- read_csv(
+  "../Data/Raw/NWIS_SiteInfo_NE_RAW.csv")
 
 #8. Reveal the names of the columns
 names(NWIS)
@@ -113,8 +117,7 @@ names(NWIS_sf)
 12. What new field(s) appear in the sf dataframe created? What field(s), if any, disappeared?
 
 >ANSWER: 
-> The "dec_long_va" and "dec_lat_va" are replaced by a new field "geometry", which contains the long, lat data 
-of objects.
+> The "dec_long_va" and "dec_lat_va" are replaced by a new field "geometry", which contains the long, lat data of objects.
 
 
 ### Plot the gage locations on top of the counties
@@ -128,8 +131,10 @@ of objects.
 #13. Plot the gage locations atop the county features
 
 ggplot() + 
-  geom_sf(data = UScounty) + 
-  geom_sf(data = NWIS)
+  geom_sf(data = Neb, color = "blue", fill = "red") + 
+  geom_sf(data = NWIS_sf, color = "black") +
+  labs(title = "NWIS Gage Locations in Nebraska", subtitle = "Curtis Cha"
+       )
 
 ```
 
@@ -148,7 +153,10 @@ Lastly, we want to attach some gage height data to our site locations. I've cons
 
 ```{r}
 #14. Read the site flow data into a data frame
-flow <- read.csv("./Data/Raw/NWIS_SiteFlowData_NE_RAW.csv", header = T, colClasses = c('site_no' = 'character'))
+flow <- read.csv(
+  "../Data/Raw/NWIS_SiteFlowData_NE_RAW.csv", 
+  header = T, 
+  colClasses = c('site_no' = 'character'))
 
 #15. Show the column names
 names(flow)
@@ -170,17 +178,25 @@ dim(join)
 
 Now we can examine where the flooding appears most acute by visualizing gage heights spatially.
 19. Plot the gage sites on top of counties (using `mapview`, `ggplot`, or `leaflet`) 
- * Show the magnitude of gage height by color, shape, other visualization technique.
+ * Show the magnitude of gage height by color, shape, other visualm2 + m1ization technique.
 
 ```{r}
 #Map the points, sized by gage height
 
-m1 <- mapview(join, zcol= "gage_ht")
-m2 <- mapview(UScounty)
+m1 <- mapview(join, zcol= "gage_ht", alpha.regions = 1)
+m2 <- mapview(Neb, col.regions = "gray")
 
 m1 + m2
-#ggplot
 
+#ggplot
+ggplot() + 
+  geom_sf(data = Neb) + 
+  geom_sf(data = join,
+          aes(color = join$gage_ht), 
+          show.legend = "Gage Height") + 
+  scale_color_gradient(low="blue", high="red") + 
+  labs(title = "Nebraska Flood Points", 
+       color = "Gage Height")
 
 ```
 
@@ -198,9 +214,22 @@ Up next we will do some spatial analysis with our data. To prepare for this, we 
 
 ```{r}
 #20 Transform the counties and gage location datasets to UTM Zone 14
-
-
+join_utm14 <- sf::st_transform(join, 32614)
+NE_utm14 <- sf::st_transform(Neb, 32614)
 #21 Plot the data
+m3 <- mapview(join_utm14,  zcol= "gage_ht", alpha.regions = 1) 
+m4 <- mapview(NE_utm14, col.regions = 'gray', alpha.regions = 1) 
+m3 + m4
+
+#ggplot
+ggplot() + 
+  geom_sf(data = NE_utm14) + 
+  geom_sf(data = join_utm14,
+          aes(color = gage_ht), 
+          show.legend = "Gage Height") + 
+  scale_color_gradient(low="blue", high="red") + 
+  labs(title = "Nebraska Flood Points (UTM 14)", 
+       color = "Gage Height")
 
 
 ```
@@ -219,13 +248,20 @@ Now let's zoom into a particular county and examine the gages located there.
 
 ```{r}
 #22 Select the county
-
+Lancaster <- NE_utm14[NE_utm14$NAME == "Lancaster",]
 
 #23 Select gages within the selected county
-
+Lancaster_gages <- sf::st_intersection(join_utm14,Lancaster)
+Lancaster_gages_sf <- sf::st_as_sf(Lancaster_gages)
 
 #24 Plot
+m5 <- mapview(Lancaster_gages, zcol = "gage_ht", alpha.regions = 1)
+m6 <- mapview(Lancaster, col.regions = "pink", alpha.regions = 1)
+m4 + m5 + m6
 
-
-
+#ggplot
+ggplot() + 
+  geom_sf(data = NE_utm14, fill = "gray") +
+  geom_sf(data = Lancaster, fill = "black") +
+  geom_sf(data = Lancaster_gages_sf, color = "red", size = 0.7)
 ```
