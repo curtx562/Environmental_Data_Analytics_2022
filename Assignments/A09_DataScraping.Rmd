@@ -1,6 +1,6 @@
 ---
 title: "Assignment 09: Data Scraping"
-author: "Student Name"
+author: "Curtis Cha"
 output: pdf_document
 geometry: margin=2.54cm
 editor_options: 
@@ -30,7 +30,8 @@ This exercise accompanies the lessons in Environmental Data Analytics on data sc
 
 ```{r, message = FALSE}
 #1
-
+library(pacman)
+pacman::p_load(tidyverse, rvest, lubridate, ggplot2, cowplot)
 
 ```
 
@@ -46,7 +47,8 @@ Indicate this website as the as the URL to be scraped. (In other words, read the
 ```{r set.the.scraping.website}
 #2
 
-
+website <- read_html(
+  "https://www.ncwater.org/WUDC/app/LWSP/report.php?pwsid=03-32-010&year=2020")
 ```
 
 3. The data we want to collect are listed below:
@@ -65,10 +67,10 @@ In the code chunk below scrape these values, assigning them to three separate va
 
 ```{r scrape.the.data}
 #3
-water.system.name <- 
-pswid <- 
-ownership <- 
-max.withdrawals.mgd <- 
+water.system.name <- 'div+ table tr:nth-child(1) td:nth-child(2)'
+pswid <- "td tr:nth-child(1) td:nth-child(5)"
+ownership <- "div+ table tr:nth-child(2) td:nth-child(4)"
+max.withdrawals.mgd <- "th~ td+ td"
 
 ```
 
@@ -84,11 +86,35 @@ max.withdrawals.mgd <-
 ```{r create.a.dataframe.from.scraped.data}
 #4
 
+water_system <- website %>% 
+  html_nodes(water.system.name) %>% html_text()
+ID <- website %>%  
+    html_nodes(pswid) %>%  html_text()
+Ownership <- website %>% 
+   html_nodes(ownership) %>% html_text()
+max_withdrawals <- website %>%
+    html_nodes(max.withdrawals.mgd) %>% html_text()
 
+months <- c("Jan", "May", "Sep", "Feb", "Jun", 
+            "Oct", "Mar", "Jul", "Nov", "Apr", "Aug", "Dec")
+  
+df <- data.frame("Water System" = rep(water_system, 12),
+                 "PSWID" = rep(ID,12),
+                 "Ownership" = rep(Ownership,12),
+                 "Month" = my(paste(months,"-2020", sep ='')),
+                 "Max_Withdrawals_mgd" = as.numeric(max_withdrawals))
+  
+df
 
 #5
 
+durham_2020 <- ggplot(df, aes(x = Month, y = Max_Withdrawals_mgd)) +
+  geom_point() +
+  labs(title = "2020 Monthly Max Withdrawls - Durham", 
+       x = "Months", 
+       y = "Max Withdrawal per Day (MGD)")
 
+durham_2020
 
 ```
 
@@ -97,7 +123,36 @@ max.withdrawals.mgd <-
 ```{r construct.a.scraping.function}
 #6.
 
+scrape.it <- function(pwsid, year) {
+  
+  #website 
+  website <- read_html(paste0(
+    'https://www.ncwater.org/WUDC/app/LWSP/report.php?pwsid=', 
+                                  pwsid, '&year=', year))
+  
+  #html_elemnts
+  water.system.name <- 'div+ table tr:nth-child(1) td:nth-child(2)'
+  pswid <- "td tr:nth-child(1) td:nth-child(5)"
+  ownership <- "div+ table tr:nth-child(2) td:nth-child(4)"
+  max.withdrawals.mgd <- "th~ td+ td"
 
+  water_system <- website %>% html_nodes(water.system.name) %>% html_text()
+  ID <- website %>% html_nodes(pswid) %>%  html_text()
+  Ownership <- website %>% html_nodes(ownership) %>% html_text()
+  max_withdrawals <- website %>% html_nodes(max.withdrawals.mgd) %>% html_text()
+  
+  #dataframe
+  months <- c("Jan", "May", "Sep", "Feb", "Jun", 
+              "Oct", "Mar", "Jul", "Nov", "Apr", "Aug", "Dec")
+  
+  df <- data.frame("Water System" = rep(water_system, 12),
+                   "PSWID" = rep(ID,12),
+                   "Ownership" = rep(Ownership,12),
+                   "Month" = my(paste(months,"-", year, sep ='')),
+                   "Max_Withdrawals_mgd" = as.numeric(max_withdrawals))
+
+  return(df)
+}
 
 ```
 
@@ -105,16 +160,25 @@ max.withdrawals.mgd <-
 
 ```{r fetch.and.plot.Durham.2015.data}
 #7
-
+durham_2015 <- scrape.it('03-32-010', '2015')
+durham_2015
 
 ```
 
 8. Use the function above to extract data for Asheville (PWSID = 01-11-010) in 2015. Combine this data with the Durham data collected above and create a plot that compares the Asheville to Durham's water withdrawals.
 
-```{r fetch.and.plot.Durham.2015.data}
+```{r fetch.and.plot.Asheville.2015.data}
 #8
+ashe_2015 <-scrape.it('01-11-010', '2015')
 
+ashe_durham_2015 <- rbind(ashe_2015, durham_2015)
 
+ggplot(ashe_durham_2015, aes(x = Month, 
+                             y = Max_Withdrawals_mgd, 
+                             color = Water.System)) + 
+  geom_point() + 
+  labs(title = "Water Usage (2015 Asheville)",
+       y = "Max Withdrawals (MGD)")
 ```
 
 
@@ -123,7 +187,55 @@ max.withdrawals.mgd <-
 ```{r}
 #9
 
+scrape.it <- function(pwsid, year) {
+  
+  #website 
+  website <- read_html(paste0(
+    'https://www.ncwater.org/WUDC/app/LWSP/report.php?pwsid=', 
+                                  pwsid, '&year=', year))
+  
+  #html_elemnts
+  water.system.name <- 'div+ table tr:nth-child(1) td:nth-child(2)'
+  pswid <- "td tr:nth-child(1) td:nth-child(5)"
+  ownership <- "div+ table tr:nth-child(2) td:nth-child(4)"
+  max.withdrawals.mgd <- "th~ td+ td"
+
+  water_system <- website %>% html_nodes(water.system.name) %>% html_text()
+  ID <- website %>% html_nodes(pswid) %>%  html_text()
+  Ownership <- website %>% html_nodes(ownership) %>% html_text()
+  max_withdrawals <- website %>% html_nodes(max.withdrawals.mgd) %>% html_text()
+  
+  #dataframe
+  months <- c("Jan", "May", "Sep", "Feb", "Jun", "Oct", 
+              "Mar", "Jul", "Nov", "Apr", "Aug", "Dec")
+  
+  df <- data.frame("Water System" = rep(water_system, 12),
+                   "PSWID" = rep(ID,12),
+                   "Ownership" = rep(Ownership,12),
+                   "Month" = my(paste(months,"-", year, sep ='')),
+                   "Max_Withdrawals_mgd" = as.numeric(max_withdrawals))
+  return(df)
+}
+
+years <- c(2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019)
+df_fin <- data.frame()
+
+for (i in years) {
+  df <- scrape.it('01-11-010', i)
+  ifelse(i == 2010, 
+         df_fin <- df, 
+         df_fin <- rbind(df_fin, df)
+  )
+  }
+
+ggplot(df_fin, aes(x = Month, y = Max_Withdrawals_mgd)) + 
+  geom_point() + 
+  geom_smooth(method = lm, se = F) +
+  labs(title = "Water Usage (2010-2019 Asheville)",
+       y = "Max Withdrawals (MGD)")
 
 ```
 
 >Question: Just by looking at the plot (i.e. not running statistics), does Asheville have a trend in water usage over time?
+
+Asheville's water usage (based on Monthly Max Withdrawals) has increased over time.
