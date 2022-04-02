@@ -6,12 +6,12 @@ output:
  pdf_document: default
 
 ---
-
-## LESSON OBJECTIVES
-
 1.  Describe the purpose of using R Markdown as a communication and workflow tool
 2.  Incorporate Markdown syntax into documents
 3.  Communicate the process and findings of an analysis session in the style of a report
+
+
+## LESSON OBJECTIVES
 
 ## USE OF R STUDIO & R MARKDOWN SO FAR...
 
@@ -86,6 +86,24 @@ Load the NTL-LTER_Lake_Nutrients_Raw dataset, display the head of the dataset, a
 
 Customize the chunk options such that the code is run but is not displayed in the final document.
 
+```{r setup, echo = FALSE}
+getwd()
+
+library("pacman")
+p_load(tidyverse, lubridate, knitr)
+
+mytheme <- theme_classic(base_size = 13) +
+  theme(axis.text = element_text(color = "blue"), 
+        legend.position = "bottom")
+theme_set(mytheme)
+
+NTL_LTER_Lake_Nutrients_Raw <- read_csv("../Data/Raw/NTL-LTER_Lake_Nutrients_Raw.csv")
+View(NTL_LTER_Lake_Nutrients_Raw)
+
+NTL_LTER_Lake_Nutrients_Raw$sampledate <- mdy(NTL_LTER_Lake_Nutrients_Raw$sampledate)
+
+head(NTL_LTER_Lake_Nutrients_Raw)
+```
 
 ### Data Exploration, Wrangling, and Visualization
 
@@ -94,18 +112,62 @@ Create an R chunk below to create a processed dataset do the following operation
 -   Include all columns except lakeid, depth_id, and comments
 -   Include only surface samples (depth = 0 m)
 -   Drop rows with missing data
+```{r Process Data}
 
+data_clean <- NTL_LTER_Lake_Nutrients_Raw %>% 
+  select(-lakeid, -depth_id, -comments) %>% 
+  filter(depth == 0) %>%
+  drop_na()
+
+```
 Create a second R chunk to create a summary dataset with the mean, minimum, maximum, and standard deviation of total nitrogen concentrations for each lake. Create a second summary dataset that is identical except that it evaluates total phosphorus. Customize the chunk options such that the code is run but not displayed in the final document.
+
+```{r Summarize Data, echo = FALSE}
+
+data_summary_N <- data_clean %>% 
+  summarise(Mean = mean(tn_ug), Min = min(tn_ug), Max = max(tn_ug), SD = sd(tn_ug))
+
+data_summary_P <- data_clean %>% 
+  summarise(Mean = mean(tp_ug), Min = min(tp_ug), Max = max(tp_ug), SD = sd(tp_ug))
+
+```
 
 Create a third R chunk that uses the function `kable` in the knitr package to display two tables: one for the summary dataframe for total N and one for the summary dataframe of total P. Use the `caption = " "` code within that function to title your tables. Customize the chunk options such that the final table is displayed but not the code used to generate the table.
 
+```{r Visualize Data Table, echo= FALSE}
+
+kable(data_summary_N, caption = "Summary Statistics for Nitrogen Concentrations")
+
+kable(data_summary_P, caption = "Summary Statistics for Phosphorous Concentrations")
+
+```
+
 Create a fourth and fifth R chunk that generates two plots (one in each chunk): one for total N over time with different colors for each lake, and one with the same setup but for total P. Decide which geom option will be appropriate for your purpose, and select a color palette that is visually pleasing and accessible. Customize the chunk options such that the final figures are displayed but not the code used to generate the figures. In addition, customize the chunk options such that the figures are aligned on the left side of the page. Lastly, add a fig.cap chunk option to add a caption (title) to your plot that will display underneath the figure.
+
+```{r Visualize Data Plots N, echo = FALSE, fig.align = "Left", fig.cap = "N (ug) over Time"}
+
+ggplot(data = data_clean, aes(x = sampledate, y = tn_ug, colour = lakename)) + geom_line(linetype = 5, size  = 0.8) +
+  labs(x = "Time", y ="Nitrogen (ug)", title = "Nitrogen [] over Time", color = "Lake")
+
+```
+
+```{r Visualize Data Plots P, echo = FALSE, fig.align = "Left", fig.cap = "P (ug) over Time"}
+
+ggplot(data = data_clean, aes(x = sampledate, y = tp_ug, colour = lakename)) + geom_line(linetype = 5, size  = 0.8) +
+  labs(x = "Time", y ="Phosporous (ug)", title = "Phosporous [] over Time", color = "Lake")
+
+```
 
 
 ### Communicating results
 
 Write a paragraph describing your findings from the R coding challenge above. This should be geared toward an educated audience but one that is not necessarily familiar with the dataset. Then insert a horizontal rule below the paragraph. Below the horizontal rule, write another paragraph describing the next steps you might take in analyzing this dataset. What questions might you be able to answer, and what analyses would you conduct to answer those questions?
 
+> The data shows that both Nitrogen and Phosphorous have similar trends in concentrations over time. Nitrogen is found in signicantly more abundance than Phosphorous according the tables above. The mean concentration for Nitrogen is 610.9 ug while that of Phosphorous is 18.9 ug. Seasonally, both Nitrogen and Phosphorous drastically increase in middle of the year (Summer/Fall) for all lakes. However, for the year 1996, both Nitrogen and Phosphorous concentrations peaked for all lakes except Paul Lake and Tuesday Lake (concentrations of 2870.3 ug and 101.1 ug, respectively). 
+
+---
+
+> Moving forward, I would conduct a time-series analysis to determine if there is an overall increase in Nitrogen and Phosphorous across all lakes and for each lake in this study. Since Paul Lake and Tuesday Lake do not share the same pattern as other lakes, a generalized linear model would also be another option for future analysis. If the lake name has a significant effect in determining Nitrogen and Phosphorous, then it's possible that the physical, geographical, or social uses of the lake impact their Nitrogen and Phosphorous concentrations.  
 
 ## KNIT YOUR PDF
 When you have completed the above steps, try knitting your PDF to see if all of the formatting options you specified turned out as planned. This may take some troubleshooting.
